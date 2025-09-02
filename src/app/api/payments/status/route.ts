@@ -1,3 +1,7 @@
+export const dynamic = "force-static";
+export const revalidate = 0;
+
+
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { paymentService } from '@/lib/paymentService';
