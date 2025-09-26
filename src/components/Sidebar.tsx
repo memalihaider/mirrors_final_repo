@@ -368,6 +368,7 @@ const navItems: {
 
   // Staff Management
   { icon: UserCheck, label: "Staff Management", href: "/staff", roles: ["admin", "user"], subItems: [] },
+  { icon: UserCheck, label: "Booking Approval Page", href: "/bookingstatus", roles: ["admin", "user"], subItems: [] },
   { icon: ClipboardList, label: "Daily Tasks", href: "/staffDailyTasks", roles: ["admin", "user"], subItems: [] },
   { icon: BarChart3, label: "Business Reports", href: "/reports", roles: ["admin", "user"], subItems: [] },
   

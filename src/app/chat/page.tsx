@@ -326,7 +326,8 @@ const sendMessage = async () => {
   // Handle image upload
   
 // Handle image upload
-const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+
+    const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
   if (!file || !selectedChatRoom || !user || isSending || !db || !storage) return;
 
@@ -341,19 +342,21 @@ const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => 
     return;
   }
 
-  setIsUploading(true);
   setIsSending(true);
   try {
-    const fileName = `chat_images/admin_${Date.now()}_${file.name}`;
-    const storageRef = ref(storage, fileName);
-    const snapshot = await uploadBytes(storageRef, file);
-    const downloadURL = await getDownloadURL(snapshot.ref);
+    // ✅ Path fix: userId folder ke andar save karna
+    const fileName = `${user.uid}_${Date.now()}_${file.name}`;
+    const storageRef = ref(storage, `chat_images/${user.uid}/${fileName}`);
+
+    // Upload file
+    await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(storageRef);
 
     const messageData = {
       senderId: user.uid,
       senderName: 'Admin',
       senderType: 'admin',
-      content: 'Image',
+      content: '📷 Image',
       type: 'image',
       imageUrl: downloadURL,
       imageName: file.name,
@@ -362,49 +365,26 @@ const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => 
       chatRoomId: selectedChatRoom.id,
     };
 
-    // Save in "messages" collection
     await addDoc(collection(db, 'messages'), messageData);
-
-    // ✅ Also save in "chats" collection (for notifications)
     await addDoc(collection(db, 'chats'), {
       ...messageData,
       createdAt: serverTimestamp(),
     });
-
     await updateDoc(doc(db, 'chatRooms', selectedChatRoom.id), {
-      lastMessage: 'Image',
+      lastMessage: '📷 Image',
       lastMessageAt: serverTimestamp(),
     });
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  } catch (error) {
-    console.error('Error uploading image:', error);
-    
-    // More detailed error handling
-    let errorMessage = 'Failed to upload image. Please try again.';
-    
-    if (error instanceof Error) {
-      if (error.message.includes('storage/unauthorized')) {
-        errorMessage = 'Upload failed: Permission denied. Please check Firebase storage rules.';
-      } else if (error.message.includes('storage/canceled')) {
-        errorMessage = 'Upload was canceled. Please try again.';
-      } else if (error.message.includes('storage/unknown')) {
-        errorMessage = 'Upload failed due to an unknown error. Please check your internet connection.';
-      } else if (error.message.includes('storage/invalid-format')) {
-        errorMessage = 'Invalid file format. Please select a valid image file.';
-      } else if (error.message.includes('storage/invalid-argument')) {
-        errorMessage = 'Invalid file. Please select a different image.';
-      }
-    }
-    
-    alert(errorMessage);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    console.log("🎉 Upload complete:", downloadURL);
+  } catch (error: any) {
+    console.error("❌ Upload error:", error);
+    alert(`Upload failed: ${error.message}`);
   } finally {
-    setIsUploading(false);
     setIsSending(false);
   }
 };
+
 
   // Format timestamp
   const formatTime = (timestamp: Timestamp | Date | null) => {

@@ -1865,6 +1865,7 @@ interface Referral {
   startDate: string;
   endDate: string;
   isActive: boolean;
+  image?: string;
   referralCode?: string;
   branches: { id: string; name: string }[];
   services: { id: string; name: string }[];
@@ -1994,6 +1995,7 @@ export default function Page() {
           branches: branchesArray,
           services: servicesArray,
         };
+       
 
         if (editingItem?.id) await updateReferral(editingItem.id, referralPayload);
         else await addReferral(referralPayload);
@@ -2442,6 +2444,32 @@ export default function Page() {
             className="w-1/2 border rounded-2xl px-3 py-2"
           />
         </div>
+        {modalType === 'offer' && (
+  <div>
+    <label className="text-sm text-gray-500">Add Image</label>
+    <input
+      type="file"
+      accept="image/*"
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            setFormData({ ...formData, image: reader.result });
+          };
+          reader.readAsDataURL(file);
+        }
+      }}
+      className="w-full border rounded-2xl px-3 py-2 mt-1"
+    />
+    {formData.image && (
+      <div className="mt-2">
+        <img src={formData.image} alt="Preview" className="w-full h-auto rounded-lg" />
+      </div>
+    )}
+  </div>
+)}
+
         {modalType === 'referral' && (
           <input
             type="text"
@@ -2480,6 +2508,7 @@ export default function Page() {
               </option>
             ))}
           </select>
+           
         </div>
         <div className="flex justify-end gap-3 mt-6">
           <button

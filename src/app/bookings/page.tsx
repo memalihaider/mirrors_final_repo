@@ -1628,7 +1628,7 @@ const allItems = bookings.filter((b) => {
                           {formTotals.totalDuration} min
                         </span>
                         <span>
-                          <strong>Total Price:</strong> $
+                          <strong>Total Price:</strong> AED
                           {formTotals.totalPrice.toFixed(2)}
                         </span>
                       </div>
