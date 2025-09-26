@@ -103,15 +103,15 @@ export default function ClientLayout({
             <main
               className={`
                 transition-all duration-300 ease-out 
-                pt-14 pb-4 px-1
+                pt-16 pb-4 px-1
                 sm:pt-16 sm:pb-6 sm:px-2
-                md:pt-20 md:pb-6 md:px-4
+                md:pt-16 md:pb-6 md:px-4
                 ${
                   isMobile
                     ? 'ml-0'
                     : collapsed
-                    ? 'ml-16' // collapsed sidebar
-                    : 'ml-44' // expanded sidebar
+                    ? 'ml-14' // collapsed sidebar (56px)
+                    : 'ml-50' // expanded sidebar (200px)
                 }
               `}
             >

@@ -56,7 +56,7 @@ export default function SignIn() {
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth,email, password);
       router.push('/');
     } catch (error: unknown) {
       console.error('Sign in error:', error);
@@ -91,7 +91,7 @@ export default function SignIn() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-pink-100 flex items-center justify-center p-4">
+    <div className="min-h-screen w-full bg-white flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
@@ -145,12 +145,6 @@ export default function SignIn() {
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                   Password
                 </label>
-                <Link
-                  href="/forgot-password"
-                  className="text-sm text-pink-600 hover:text-pink-700 font-medium transition-colors"
-                >
-                  Forgot password?
-                </Link>
               </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -212,23 +206,11 @@ export default function SignIn() {
             </button>
           </form>
 
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-800 font-medium mb-1">Demo Credentials:</p>
-            <p className="text-sm text-blue-600">admin@mirrorbeauty.com / admin123</p>
-          </div>
+        
 
           {/* Sign Up Link */}
           <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              Don&apos;t have an account?{' '}
-              <Link
-                href="/signup"
-                className="text-pink-600 hover:text-pink-700 font-medium transition-colors"
-              >
-                Create one here
-              </Link>
-            </p>
+            
           </div>
         </div>
 
@@ -242,3 +224,5 @@ export default function SignIn() {
     </div>
   );
 }
+
+

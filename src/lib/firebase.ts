@@ -109,3 +109,5 @@ export function getFirebaseStatus() {
     missingVars: configValidation.isValid ? [] : configValidation.missingVars
   };
 }
+
+

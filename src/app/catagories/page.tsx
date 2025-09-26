@@ -11,25 +11,27 @@ import {
   convertFileToBase64,
   compressImage
 } from '@/lib/firebaseServicesNoStorage';
+import AccessWrapper from '@/components/AccessWrapper';
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [selectedBranch, setSelectedBranch] = useState<string>("all");
+
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     color: 'from-pink-400 to-pink-500',
     image: '',
-    gender: 'men' as 'men' | 'women' | 'unisex'
+    gender: 'men' as 'men' | 'women' | 'unisex',
+    branch: '' // ✅ new field
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
-
-
-  // Subscribe to real-time updates
+  // Subscribe to categories changes
   useEffect(() => {
     const unsubscribe = subscribeToCategoriesChanges((updatedCategories) => {
       setCategories(updatedCategories);
@@ -44,58 +46,44 @@ export default function CategoriesPage() {
     if (file) {
       setImageFile(file);
       const reader = new FileReader();
-      reader.onload = (e) => {
-        setFormData({ ...formData, image: e.target?.result as string });
-      };
+      reader.onload = () => setFormData({ ...formData, image: reader.result as string });
       reader.readAsDataURL(file);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim()) return;
+    if (!formData.name || !formData.branch) return;
 
     setUploading(true);
     try {
-      let imageBase64 = editingCategory?.imageBase64;
-
-      // Convert image to base64 if new image selected
+      let imageBase64 = formData.image;
+      
       if (imageFile) {
-        try {
-          // Compress image to reduce size (max 800px width, 80% quality)
-          imageBase64 = await compressImage(imageFile, 800, 0.8);
-        } catch {
-          // Fallback to regular base64 conversion if compression fails
-          imageBase64 = await convertFileToBase64(imageFile);
-        }
+        imageBase64 = await compressImage(imageFile, 800, 0.8);
       }
 
+      const categoryData = {
+        name: formData.name,
+        description: formData.description,
+        color: formData.color,
+        imageBase64: imageBase64,
+        gender: formData.gender,
+        branch: formData.branch,
+        serviceCount: editingCategory?.serviceCount || 0,
+        createdAt: editingCategory?.createdAt || new Date(),
+        updatedAt: new Date()
+      };
+
       if (editingCategory) {
-        // Update existing category
-        await updateCategory(editingCategory.id!, {
-          name: formData.name,
-          description: formData.description,
-          color: formData.color,
-          gender: formData.gender,
-          imageBase64: imageBase64,
-          serviceCount: editingCategory.serviceCount // Keep existing service count
-        });
+        await updateCategory(editingCategory.id, categoryData);
       } else {
-        // Add new category
-        await addCategory({
-          name: formData.name,
-          description: formData.description,
-          color: formData.color,
-          gender: formData.gender,
-          serviceCount: 0,
-          imageBase64: imageBase64
-        });
+        await addCategory(categoryData);
       }
 
       resetForm();
     } catch (error) {
       console.error('Error saving category:', error);
-      alert('Error saving category. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -107,251 +95,385 @@ export default function CategoriesPage() {
       description: '',
       color: 'from-pink-400 to-pink-500',
       image: '',
-      gender: 'men'
+      gender: 'men',
+      branch: ''
     });
     setImageFile(null);
-    setShowModal(false);
     setEditingCategory(null);
+    setShowModal(false);
   };
 
   const handleEdit = (category: Category) => {
-    setEditingCategory(category);
     setFormData({
       name: category.name,
-      description: category.description,
-      color: category.color,
-      image: category.imageBase64 || '',
-      gender: category.gender
+      description: category.description || '',
+      color: category.color || 'from-pink-400 to-pink-500',
+      image: category.image || '',
+      gender: category.gender,
+      branch: category.branch || ''
     });
-    setImageFile(null);
+    setEditingCategory(category);
     setShowModal(true);
   };
 
   const handleDelete = async (category: Category) => {
-    if (confirm('Delete this category?')) {
+    if (window.confirm(`Are you sure you want to delete "${category.name}"?`)) {
       try {
-        await deleteCategory(category.id!);
+        await deleteCategory(category.id);
       } catch (error) {
         console.error('Error deleting category:', error);
-        alert('Error deleting category. Please try again.');
       }
     }
   };
 
   const openAddModal = () => {
-    setEditingCategory(null);
     setFormData({
       name: '',
       description: '',
       color: 'from-pink-400 to-pink-500',
       image: '',
-      gender: 'men'
+      gender: 'men',
+      branch: ''
     });
-    setImageFile(null);
+    setEditingCategory(null);
     setShowModal(true);
   };
 
   if (loading) {
     return (
-      <div className="p-2 sm:p-3">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex items-center justify-center py-8 sm:py-12">
-            <div className="animate-spin rounded-full h-6 sm:h-8 w-6 sm:w-8 border-b-2 border-pink-600"></div>
-            <span className="ml-2 sm:ml-3 text-sm sm:text-base text-pink-600">Loading categories...</span>
-          </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-white to-purple-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading categories...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-2 sm:p-3">
-      <div className="max-w-5xl mx-auto">
-        {/* Compact Header */}
-        <div className="mb-3 sm:mb-4">
-          <div className="flex justify-between items-center">
+    <AccessWrapper>
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
+        <div className="p-2 sm:p-6">
+          <div className="max-w-7xl mx-auto">
+            {/* Enhanced Header */}
+            <div className="mb-8 relative">
+              <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-pink-600 rounded-3xl p-6 sm:p-8 shadow-2xl">
+                <div className="absolute inset-0 bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-pink-600/20 rounded-3xl backdrop-blur-sm"></div>
+                <div className="relative z-10">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                      <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2 tracking-tight">
+                        Service Categories
+                      </h1>
+                      <p className="text-pink-100 text-sm sm:text-base font-medium">
+                        Organize and manage your beauty services with style
+                      </p>
+                      <div className="flex items-center gap-4 mt-3">
+                        <div className="flex items-center gap-2 text-pink-100">
+                          <div className="w-2 h-2 bg-pink-200 rounded-full animate-pulse"></div>
+                          <span className="text-xs font-medium">{categories.length} Categories</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-pink-100">
+                          <div className="w-2 h-2 bg-purple-200 rounded-full animate-pulse"></div>
+                          <span className="text-xs font-medium">
+                            {categories.reduce((sum, cat) => sum + (cat.serviceCount || 0), 0)} Services
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      {/* Branch Filter */}
+                      <div className="relative">
+                        <select
+                          value={selectedBranch}
+                          onChange={(e) => setSelectedBranch(e.target.value)}
+                          className="appearance-none bg-white/20 backdrop-blur-md border border-white/30 rounded-xl px-4 py-2.5 text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 cursor-pointer pr-10 min-w-[140px]"
+                        >
+                          <option value="all" className="text-gray-800">All Branches</option>
+                          <option value="Marina" className="text-gray-800">Marina</option>
+                          <option value="IBN Battuta Mall" className="text-gray-800">IBN Battuta Mall</option>
+                          <option value="AI Bustaan" className="text-gray-800">AI Bustaan</option>
+                          <option value="TECOM" className="text-gray-800">TECOM</option>
+                          <option value="AI Muraqqabat" className="text-gray-800">AI Muraqqabat</option>
+                        </select>
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                          <svg className="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
+
+                      {/* Add Category Button */}
+                      <button
+                        onClick={openAddModal}
+                        className="group bg-white/20 backdrop-blur-md hover:bg-white/30 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border border-white/30 hover:border-white/50 hover:scale-105 hover:shadow-lg flex items-center gap-2"
+                      >
+                        <div className="w-5 h-5 rounded-full bg-white/30 flex items-center justify-center group-hover:rotate-90 transition-transform duration-300">
+                          <span className="text-xs">+</span>
+                        </div>
+                        <span className="hidden sm:inline">Add Category</span>
+                        <span className="sm:hidden">Add</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Men's Categories Section */}
+            <section className="mb-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <span className="text-white text-sm font-bold">♂</span>
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-800">Men's Services</h2>
+                </div>
+                <div className="flex-1 h-px bg-gradient-to-r from-blue-200 to-transparent"></div>
+                <span className="text-sm text-blue-600 font-medium bg-blue-50 px-3 py-1 rounded-full">
+                  {categories.filter((cat) => cat.gender === 'men').filter((cat) => selectedBranch === 'all' || cat.branch === selectedBranch).length} categories
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
+                {categories
+                  .filter((cat) => cat.gender === 'men')
+                  .filter((cat) => selectedBranch === 'all' || cat.branch === selectedBranch)
+                  .map((category) => (
+                    <CategoryCard
+                      key={category.id}
+                      category={category}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+              </div>
+            </section>
+
+            {/* Women's Categories Section */}
+            <section className="mb-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-gradient-to-r from-pink-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <span className="text-white text-sm font-bold">♀</span>
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-800">Women's Services</h2>
+                </div>
+                <div className="flex-1 h-px bg-gradient-to-r from-pink-200 to-transparent"></div>
+                <span className="text-sm text-pink-600 font-medium bg-pink-50 px-3 py-1 rounded-full">
+                  {categories.filter((cat) => cat.gender === 'women').filter((cat) => selectedBranch === 'all' || cat.branch === selectedBranch).length} categories
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
+                {categories
+                  .filter((cat) => cat.gender === 'women')
+                  .filter((cat) => selectedBranch === 'all' || cat.branch === selectedBranch)
+                  .map((category) => (
+                    <CategoryCard
+                      key={category.id}
+                      category={category}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+              </div>
+            </section>
+
+            {/* Empty State */}
+            {categories.length === 0 && (
+              <div className="text-center py-4 sm:py-6">
+                <div className="w-8 sm:w-10 h-8 sm:h-10 bg-gradient-to-br from-pink-200 to-pink-300 rounded-xl flex items-center justify-center mx-auto mb-2">
+                  <div className="text-xs sm:text-sm text-pink-600">📂</div>
+                </div>
+                <h3 className="text-xs font-semibold text-pink-700 mb-1">No categories yet</h3>
+                <p className="text-xs text-pink-500 mb-3">Create your first category</p>
+                <button
+                  onClick={openAddModal}
+                  className="bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 px-3 py-1.5 rounded-lg text-xs font-medium border border-pink-200/50"
+                >
+                  Create Category
+                </button>
+              </div>
+            )}
+
+            {/* Modal */}
+            {showModal && (
+              <CategoryModal
+                formData={formData}
+                setFormData={setFormData}
+                handleImageUpload={handleImageUpload}
+                handleSubmit={handleSubmit}
+                resetForm={resetForm}
+                uploading={uploading}
+                editingCategory={editingCategory}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    </AccessWrapper>
+  );
+}
+
+// Category Modal component
+function CategoryModal({ formData, setFormData, handleImageUpload, handleSubmit, resetForm, uploading, editingCategory }: any) {
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md transform animate-in slide-in-from-bottom-4 duration-500">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-pink-600 rounded-t-3xl p-6">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-base sm:text-lg font-medium text-pink-600 mb-1">Categories</h1>
-              <p className="text-xs text-pink-500">Manage service categories</p>
+              <h3 className="text-xl font-bold text-white mb-1">
+                {editingCategory ? 'Edit Category' : 'Create New Category'}
+              </h3>
+              <p className="text-pink-100 text-sm">
+                {editingCategory ? 'Update category information' : 'Add a new service category'}
+              </p>
             </div>
             <button
-              onClick={openAddModal}
-              className="bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-medium transition-all border border-pink-200/50 hover:border-pink-300/50"
+              onClick={resetForm}
+              className="bg-white/20 hover:bg-white/30 rounded-full p-2 text-white transition-all duration-200 hover:scale-110"
             >
-              <span className="hidden sm:inline">Add Category</span>
-              <span className="sm:hidden">Add</span>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           </div>
         </div>
 
-        {/* Categories Grid with Gender Separation */}
-        {/* Men Categories Section */}
-        {categories.filter(cat => cat.gender === 'men').length > 0 && (
-          <div className="mb-6 sm:mb-8">
-            <h2 className="text-lg sm:text-2xl font-bold text-blue-600 mb-3 sm:mb-4">Men Categories</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
-              {categories.filter(cat => cat.gender === 'men').map((category) => (
-                <CategoryCard key={category.id} category={category} onEdit={handleEdit} onDelete={handleDelete} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Women Categories Section */}
-        {categories.filter(cat => cat.gender === 'women').length > 0 && (
-          <div className="mb-6 sm:mb-8">
-            <h2 className="text-lg sm:text-2xl font-bold text-pink-600 mb-3 sm:mb-4">Women Categories</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
-              {categories.filter(cat => cat.gender === 'women').map((category) => (
-                <CategoryCard key={category.id} category={category} onEdit={handleEdit} onDelete={handleDelete} />
-              ))}
-            </div>
-          </div>
-        )}
-
-
-
-        {/* Compact Empty State */}
-        {categories.length === 0 && !loading && (
-          <div className="text-center py-4 sm:py-6">
-            <div className="w-8 sm:w-10 h-8 sm:h-10 bg-gradient-to-br from-pink-200 to-pink-300 rounded-xl flex items-center justify-center mx-auto mb-2">
-              <div className="text-xs sm:text-sm text-pink-600">📂</div>
-            </div>
-            <h3 className="text-xs font-semibold text-pink-700 mb-1">No categories yet</h3>
-            <p className="text-xs text-pink-500 mb-3">Create your first category</p>
-            <button
-              onClick={openAddModal}
-              className="bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 px-3 py-1.5 rounded-lg text-xs font-medium border border-pink-200/50"
-            >
-              Create Category
-            </button>
-          </div>
-        )}
-
-        {/* Compact Modal with Image Upload */}
-        {showModal && (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
-            <div className="bg-white/90 backdrop-blur-xl border border-pink-200/30 rounded-xl sm:rounded-2xl shadow-[0_20px_50px_rgb(233,30,99,0.35)] w-full max-w-xs sm:max-w-sm">
-              <div className="p-3 sm:p-4">
-                <h3 className="text-sm font-semibold text-pink-700 mb-3 sm:mb-4">
-                  {editingCategory ? 'Edit Category' : 'Add Category'}
-                </h3>
-                <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-3">
-                  {/* Image Upload */}
-                  <div>
-                    <label className="block text-xs font-medium text-pink-600 mb-1">Image</label>
-                    <div className="relative">
-                      {formData.image ? (
-                        <div className="relative w-full h-16 rounded-lg overflow-hidden border border-pink-200/50">
-                          <Image
-                            src={formData.image}
-                            alt="Category preview"
-                            fill
-                            className="object-cover"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setFormData({ ...formData, image: '' });
-                              setImageFile(null);
-                            }}
-                            className="absolute top-1 right-1 w-5 h-5 bg-white/90 rounded-full flex items-center justify-center text-pink-600 hover:bg-white text-xs"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ) : (
-                        <label className="flex flex-col items-center justify-center w-full h-12 sm:h-16 border-2 border-pink-200/50 border-dashed rounded-lg cursor-pointer bg-pink-50/30 hover:bg-pink-50/50 transition-all">
-                          <div className="flex flex-col items-center justify-center">
-                            <div className="w-5 sm:w-6 h-5 sm:h-6 bg-pink-100 rounded-md flex items-center justify-center mb-1">
-                              <span className="text-pink-500 text-xs">📷</span>
-                            </div>
-                            <p className="text-xs text-pink-600 font-medium">Upload</p>
-                          </div>
-                          <input
-                            type="file"
-                            className="hidden"
-                            accept="image/*"
-                            onChange={handleImageUpload}
-                          />
-                        </label>
-                      )}
+        {/* Form */}
+        <div className="p-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Image Upload */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">Category Image</label>
+              <div className="relative">
+                {formData.image ? (
+                  <div className="relative w-full h-32 rounded-xl overflow-hidden border-2 border-gray-200 group">
+                    <Image src={formData.image} alt="Category preview" fill className="object-cover" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, image: '' })}
+                        className="bg-white/90 hover:bg-white rounded-full p-2 text-red-500 hover:text-red-600 transition-all duration-200 hover:scale-110"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-pink-600 mb-1">Name</label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-pink-200/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-400 focus:border-pink-400 transition-all text-xs"
-                      placeholder="Category name"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-pink-600 mb-1">Description</label>
-                    <textarea
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-pink-200/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-400 focus:border-pink-400 transition-all resize-none text-xs"
-                      rows={2}
-                      placeholder="Description"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-pink-600 mb-1">Gender</label>
-                    <div className="relative">
-                      <select
-                        value={formData.gender}
-                        onChange={(e) => setFormData({ ...formData, gender: e.target.value as 'men' | 'women' })}
-                        className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-pink-200/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-pink-400 focus:border-pink-400 transition-all text-xs appearance-none bg-white cursor-pointer"
-                      >
-                        <option value="men">Men</option>
-                        <option value="women">Women</option>
-                      </select>
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                        <svg className="w-3 h-3 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition-all duration-200 group">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <div className="w-12 h-12 bg-gradient-to-r from-pink-500 to-purple-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-200">
+                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                       </div>
+                      <p className="text-sm font-medium text-gray-600">Upload Category Image</p>
+                      <p className="text-xs text-gray-400">PNG, JPG up to 10MB</p>
                     </div>
-                  </div>
-
-                  <div className="flex justify-end space-x-2 pt-2 sm:pt-3 border-t border-pink-100">
-                    <button
-                      type="button"
-                      onClick={resetForm}
-                      disabled={uploading}
-                      className="px-2 sm:px-3 py-1 sm:py-1.5 text-pink-600 bg-pink-50/60 rounded-lg text-xs font-medium hover:bg-pink-100/60 transition-all disabled:opacity-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={uploading}
-                      className="px-2 sm:px-3 py-1 sm:py-1.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 rounded-lg text-xs font-medium border border-pink-200/50 hover:border-pink-300/50 transition-all disabled:opacity-50 flex items-center space-x-1"
-                    >
-                      {uploading && (
-                        <div className="animate-spin rounded-full h-3 w-3 border-b border-pink-600"></div>
-                      )}
-                      <span>{editingCategory ? 'Update' : 'Create'}</span>
-                    </button>
-                  </div>
-                </form>
+                    <input
+                      type="file"
+                      onChange={handleImageUpload}
+                      accept="image/*"
+                      className="hidden"
+                    />
+                  </label>
+                )}
               </div>
             </div>
-          </div>
-        )}
+
+            {/* Name */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Category Name</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all duration-200 text-sm"
+                placeholder="Enter category name"
+                required
+              />
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all duration-200 resize-none text-sm"
+                rows={3}
+                placeholder="Describe this category"
+              />
+            </div>
+
+            {/* Branch and Gender */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Branch */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Branch</label>
+                <select
+                  value={formData.branch}
+                  onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all duration-200 text-sm bg-white cursor-pointer"
+                  required
+                >
+                  <option value="">Select Branch</option>
+                  <option value="Marina">Marina</option>
+                  <option value="IBN Battuta Mall">IBN Battuta Mall</option>
+                  <option value="AI Bustaan">AI Bustaan</option>
+                  <option value="TECOM">TECOM</option>
+                  <option value="AI Muraqqabat">AI Muraqqabat</option>
+                </select>
+              </div>
+
+              {/* Gender */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Gender</label>
+                <select
+                  value={formData.gender}
+                  onChange={(e) => setFormData({ ...formData, gender: e.target.value as 'men' | 'women' })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all duration-200 text-sm bg-white cursor-pointer"
+                >
+                  <option value="men">♂ Men</option>
+                  <option value="women">♀ Women</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={resetForm}
+                disabled={uploading}
+                className="px-6 py-3 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 hover:scale-105"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={uploading}
+                className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 flex items-center space-x-2 hover:scale-105 shadow-lg hover:shadow-xl"
+              >
+                {uploading && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                )}
+                <span>{editingCategory ? 'Update Category' : 'Create Category'}</span>
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
 }
 
-// Category Card Component
+// Category Card component
 function CategoryCard({ category, onEdit, onDelete }: {
   category: Category,
   onEdit: (cat: Category) => void,
@@ -359,107 +481,101 @@ function CategoryCard({ category, onEdit, onDelete }: {
 }) {
   const getGenderBadgeColor = (gender: string) => {
     switch (gender) {
-      case 'men': return 'bg-blue-100 text-blue-700';
-      case 'women': return 'bg-pink-100 text-pink-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'men': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'women': return 'bg-pink-100 text-pink-800 border-pink-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
+  const getBranchBadgeColor = (branch: string) => {
+    const colors = [
+      'bg-purple-100 text-purple-800 border-purple-200',
+      'bg-indigo-100 text-indigo-800 border-indigo-200',
+      'bg-teal-100 text-teal-800 border-teal-200',
+      'bg-orange-100 text-orange-800 border-orange-200',
+      'bg-emerald-100 text-emerald-800 border-emerald-200'
+    ];
+    const index = branch ? branch.length % colors.length : 0;
+    return colors[index];
+  };
+
   return (
-    <div className="bg-white/90 backdrop-blur-xl border border-pink-200/30 rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(233,30,99,0.15)] transition-all duration-300 hover:shadow-[0_12px_40px_rgb(233,30,99,0.25)] hover:scale-[1.02] group">
-      {/* Enhanced Category Header with Bigger Image Display */}
-      <div className="relative h-20 sm:h-24 overflow-hidden">
+    <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-pink-200 hover:-translate-y-1">
+      {/* Image Section */}
+      <div className="relative h-32 sm:h-36 overflow-hidden bg-gradient-to-br from-pink-50 to-purple-50">
         {category.imageBase64 ? (
-          <div className="relative h-full">
-            <Image
-              src={category.imageBase64}
-              alt={category.name}
-              fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-            {/* Bottom gradient for text readability only */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
-          </div>
+          <Image
+            src={category.imageBase64}
+            alt={category.name}
+            fill
+            className="object-cover group-hover:scale-110 transition-transform duration-500"
+          />
         ) : (
-          <div className={`h-full bg-gradient-to-br ${category.color} relative`}>
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
-            {/* Placeholder icon for categories without images */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-6 sm:w-8 h-6 sm:h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                <span className="text-white/80 text-xs sm:text-sm">📷</span>
-              </div>
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="w-12 h-12 bg-gradient-to-r from-pink-400 to-purple-500 rounded-xl flex items-center justify-center">
+              <span className="text-white text-lg font-bold">
+                {category.name.charAt(0).toUpperCase()}
+              </span>
             </div>
           </div>
         )}
-
-        {/* Enhanced Action Buttons */}
-        <div className="absolute top-1 sm:top-2 right-1 sm:right-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+        
+        {/* Hover Actions */}
+        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-2">
           <button
             onClick={() => onEdit(category)}
-            className="w-5 sm:w-6 h-5 sm:h-6 bg-white/95 backdrop-blur-sm rounded-md flex items-center justify-center text-pink-600 hover:bg-white hover:scale-110 text-xs transition-all shadow-md border border-white/20"
+            className="bg-white/90 hover:bg-white rounded-full p-2 text-blue-600 hover:text-blue-700 transition-all duration-200 hover:scale-110 shadow-lg"
           >
-            ✎
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
           </button>
           <button
             onClick={() => onDelete(category)}
-            className="w-5 sm:w-6 h-5 sm:h-6 bg-white/95 backdrop-blur-sm rounded-md flex items-center justify-center text-pink-600 hover:bg-red-50 hover:text-red-600 hover:scale-110 text-xs transition-all shadow-md border border-white/20"
+            className="bg-white/90 hover:bg-white rounded-full p-2 text-red-500 hover:text-red-600 transition-all duration-200 hover:scale-110 shadow-lg"
           >
-            ×
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
           </button>
         </div>
-
-        {/* Gender Badge */}
-        <div className="absolute top-1 sm:top-2 left-1 sm:left-2">
-          <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-xs font-medium ${getGenderBadgeColor(category.gender)} backdrop-blur-sm`}>
-            {category.gender.charAt(0).toUpperCase() + category.gender.slice(1)}
-          </span>
-        </div>
-
-        {/* Category Name Overlay for Images */}
-        {category.imageBase64 && (
-          <div className="absolute bottom-1 sm:bottom-2 left-2 sm:left-3 right-2 sm:right-3">
-            <h3 className="text-xs sm:text-sm font-semibold text-white drop-shadow-lg truncate">
-              {category.name}
-            </h3>
-          </div>
-        )}
       </div>
 
-      {/* Enhanced Category Content */}
-      <div className="p-2 sm:p-3">
-        {/* Only show title if no image, otherwise it's shown as overlay */}
-        {!category.imageBase64 && (
-          <div className="flex items-start justify-between mb-1">
-            <h3 className="text-xs font-semibold text-pink-700 leading-tight truncate">{category.name}</h3>
-            <span className="text-xs text-pink-500 bg-pink-50 px-1.5 py-0.5 rounded-full font-medium ml-1">
-              {category.serviceCount}
-            </span>
-          </div>
+      {/* Content Section */}
+      <div className="p-4">
+        {/* Title */}
+        <h3 className="font-bold text-gray-900 text-sm sm:text-base mb-2 line-clamp-1 group-hover:text-pink-600 transition-colors duration-200">
+          {category.name}
+        </h3>
+
+        {/* Description */}
+        {category.description && (
+          <p className="text-gray-600 text-xs sm:text-sm mb-3 line-clamp-2 leading-relaxed">
+            {category.description}
+          </p>
         )}
 
-        {/* For images, show service count prominently */}
-        {category.imageBase64 && (
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-pink-500 font-medium">Services</span>
-            <span className="text-xs text-pink-500 bg-pink-50 px-1.5 py-0.5 rounded-full font-medium">
-              {category.serviceCount}
-            </span>
-          </div>
-        )}
-
-        <p className="text-xs text-pink-600 leading-tight mb-1 sm:mb-2 line-clamp-2">{category.description}</p>
-
-        {/* Enhanced Footer */}
-        <div className="flex items-center justify-between pt-1 border-t border-pink-100">
-          <span className="text-xs text-pink-500 font-medium">
-            {category.imageBase64 ? 'Active' : 'Services'}
+        {/* Badges */}
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getGenderBadgeColor(category.gender)}`}>
+            {category.gender === 'men' ? '♂ Men' : '♀ Women'}
           </span>
-          <div className="flex items-center space-x-1">
-            <div className={`w-1.5 h-1.5 rounded-full bg-gradient-to-br ${category.color}`}></div>
-            <span className="text-xs text-pink-400">
-              {category.imageBase64 ? 'Ready' : 'Active'}
+          {category.branch && (
+            <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getBranchBadgeColor(category.branch)}`}>
+              {category.branch}
             </span>
-          </div>
+          )}
+        </div>
+
+        {/* Service Count */}
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <span className="flex items-center gap-1">
+            <div className="w-1.5 h-1.5 bg-pink-400 rounded-full"></div>
+            {category.serviceCount || 0} services
+          </span>
+          <span className="text-gray-400">
+            {category.createdAt ? new Date(category.createdAt.seconds * 1000).toLocaleDateString() : 'Recently'}
+          </span>
         </div>
       </div>
     </div>
