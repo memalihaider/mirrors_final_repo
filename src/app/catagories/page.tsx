@@ -228,7 +228,7 @@ export default function CategoriesPage() {
                   <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
                     <span className="text-white text-sm font-bold">♂</span>
                   </div>
-                  <h2 className="text-xl font-bold text-gray-800">Men's Services</h2>
+                  <h2 className="text-xl font-bold text-gray-800">Men's Categories</h2>
                 </div>
                 <div className="flex-1 h-px bg-gradient-to-r from-blue-200 to-transparent"></div>
                 <span className="text-sm text-blue-600 font-medium bg-blue-50 px-3 py-1 rounded-full">
@@ -257,7 +257,7 @@ export default function CategoriesPage() {
                   <div className="w-8 h-8 bg-gradient-to-r from-pink-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
                     <span className="text-white text-sm font-bold">♀</span>
                   </div>
-                  <h2 className="text-xl font-bold text-gray-800">Women's Services</h2>
+                  <h2 className="text-xl font-bold text-gray-800">Women's Categories</h2>
                 </div>
                 <div className="flex-1 h-px bg-gradient-to-r from-pink-200 to-transparent"></div>
                 <span className="text-sm text-pink-600 font-medium bg-pink-50 px-3 py-1 rounded-full">

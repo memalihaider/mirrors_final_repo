@@ -31,9 +31,8 @@ export default function ClientLayout({
       if (mobile) {
         setSidebarOpen(false); // always closed on load
       } else {
-        // Restore collapsed state on desktop
-        const saved = localStorage.getItem('sidebar-collapsed');
-        setCollapsed(saved ? saved === 'true' : false);
+        // Always start with sidebar expanded on desktop (non-sticky)
+        setCollapsed(false);
       }
     };
 
@@ -47,11 +46,8 @@ export default function ClientLayout({
     if (isMobile) {
       setSidebarOpen((prev) => !prev);
     } else {
-      setCollapsed((prev) => {
-        const newState = !prev;
-        localStorage.setItem('sidebar-collapsed', newState.toString());
-        return newState;
-      });
+      // Toggle collapse state without saving to localStorage (non-sticky)
+      setCollapsed((prev) => !prev);
     }
   };
 
@@ -111,7 +107,7 @@ export default function ClientLayout({
                     ? 'ml-0'
                     : collapsed
                     ? 'ml-14' // collapsed sidebar (56px)
-                    : 'ml-50' // expanded sidebar (200px)
+                    : 'ml-72' // expanded sidebar (280px)
                 }
               `}
             >

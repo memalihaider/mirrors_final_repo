@@ -106,6 +106,8 @@ export default function UsersPage() {
             'sales',
             'reports',
             'membership',
+            'ecommerce',
+            'membershipReport'
           ]
         : formData.accessPages;
 
@@ -592,6 +594,8 @@ export default function UsersPage() {
                             <option value="reports">reports</option>
                             <option value="profile">Profile</option>
                             <option value="membership">Membership</option>
+                            <option value="membershipReport">Membership Report</option>
+                            <option value="ecommerce">Ecommerce Page</option>
                           </select>
                         </motion.div>
 

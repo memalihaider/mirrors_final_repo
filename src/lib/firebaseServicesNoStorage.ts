@@ -1157,6 +1157,393 @@
 
 
 // category branch add
+
+// import { 
+//   collection, 
+//   addDoc, 
+//   updateDoc, 
+//   deleteDoc, 
+//   doc, 
+//   getDocs, 
+//   onSnapshot,
+//   query,
+//   orderBy,
+//   Timestamp ,
+//   CollectionReference
+// } from 'firebase/firestore';
+// import { db, isFirebaseConfigured } from './firebase';
+
+// // ==================== CATEGORY ====================
+
+// export interface Category {
+//   id?: string;
+//   name: string;
+//   description: string;
+//   serviceCount: number;
+//   color: string;
+//   imageBase64?: string; 
+//   gender: 'men' | 'women' | 'unisex';
+//    branch?: string; // ✅ branch field add ki
+//   createdAt?: Timestamp;
+//   updatedAt?: Timestamp;
+// }
+
+// let categoriesCollection: CollectionReference | null = null;
+// if (isFirebaseConfigured() && db) {
+//   categoriesCollection = collection(db, 'categories');
+// }
+
+// export const convertFileToBase64 = (file: File): Promise<string> => {
+//   return new Promise((resolve, reject) => {
+//     const reader = new FileReader();
+//     reader.onload = () => {
+//       if (reader.result) resolve(reader.result as string);
+//       else reject(new Error('Failed to convert file to base64'));
+//     };
+//     reader.onerror = () => reject(new Error('Error reading file'));
+//     reader.readAsDataURL(file);
+//   });
+// };
+
+// export const compressImage = (file: File, maxWidth: number = 800, quality: number = 0.8): Promise<string> => {
+//   return new Promise((resolve, reject) => {
+//     const canvas = document.createElement('canvas');
+//     const ctx = canvas.getContext('2d');
+//     const img = new Image();
+    
+//     img.onload = () => {
+//       const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+//       canvas.width = img.width * ratio;
+//       canvas.height = img.height * ratio;
+//       ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+//       const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+//       resolve(compressedBase64);
+//     };
+    
+//     img.onerror = () => reject(new Error('Error loading image'));
+//     img.src = URL.createObjectURL(file);
+//   });
+// };
+
+// // ---------------- Add Category with defaults ----------------
+// export const addCategory = async (
+//   categoryData: Partial<Omit<Category, 'id' | 'createdAt' | 'updatedAt'>>
+// ): Promise<string> => {
+//   try {
+//     if (!categoriesCollection) throw new Error('Categories collection not initialized');
+//     const docRef = await addDoc(categoriesCollection, {
+//       name: categoryData.name || 'Unnamed Category',
+//       description: categoryData.description || '',
+//       serviceCount: categoryData.serviceCount ?? 0,
+//       color: categoryData.color || '#ffffff',
+//       gender: categoryData.gender || 'unisex',
+//        branch: categoryData.branch || '', // ✅ branch save
+//       imageBase64: categoryData.imageBase64 || '',
+//       createdAt: Timestamp.now(),
+//       updatedAt: Timestamp.now()
+//     });
+//     return docRef.id;
+//   } catch (error) {
+//     console.error('Error adding category:', error);
+//     throw error;
+//   }
+// };
+
+// export const updateCategory = async (categoryId: string, categoryData: Partial<Category>): Promise<void> => {
+//   try {
+//     if (!isFirebaseConfigured() || !db) throw new Error('Firebase is not configured');
+//     const categoryRef = doc(db, 'categories', categoryId);
+//     await updateDoc(categoryRef, { ...categoryData, branch: categoryData.branch || '',  updatedAt: Timestamp.now() });
+   
+//   } catch (error) {
+//     console.error('Error updating category:', error);
+//     throw error;
+//   }
+// };
+
+// export const deleteCategory = async (categoryId: string): Promise<void> => {
+//   try {
+//     if (!isFirebaseConfigured() || !db) throw new Error('Firebase is not configured');
+//     const categoryRef = doc(db, 'categories', categoryId);
+//     await deleteDoc(categoryRef);
+//   } catch (error) {
+//     console.error('Error deleting category:', error);
+//     throw error;
+//   }
+// };
+
+// export const getCategories = async (): Promise<Category[]> => {
+//   try {
+//     if (!categoriesCollection) return [];
+//     const q = query(categoriesCollection, orderBy('createdAt', 'desc'));
+//     const snapshot = await getDocs(q);
+//     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category));
+//   } catch (error) {
+//     console.error('Error getting categories:', error);
+//     throw error;
+//   }
+// };
+
+// export const subscribeToCategoriesChanges = (callback: (categories: Category[]) => void, errorCallback?: (error: Error) => void) => {
+//   if (!categoriesCollection) return () => {};
+//   const q = query(categoriesCollection, orderBy('createdAt', 'desc'));
+//   return onSnapshot(q, snapshot => {
+//     const categories: Category[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category));
+//     callback(categories);
+//   }, error => {
+//     console.error('Error listening to categories:', error);
+//     if (errorCallback) errorCallback(error);
+//   });
+// };
+
+// // ==================== SERVICE ====================
+
+// export interface Service {
+//   id?: string;
+//   name: string;
+//   category: string;
+//   duration: number;
+//   price: number;
+//   description: string;
+//    branch?: string;  // ✅ branch field add
+//   isActive: boolean;
+//   imageBase64?: string;
+//   createdAt?: Timestamp;
+//   updatedAt?: Timestamp;
+// }
+
+// let servicesCollection: CollectionReference | null = null;
+// if (isFirebaseConfigured() && db) {
+//   servicesCollection = collection(db, 'services');
+// }
+
+// // ---------------- Add Service with defaults ----------------
+// export const addService = async (
+//   serviceData: Partial<Omit<Service, 'id' | 'createdAt' | 'updatedAt'>>
+// ): Promise<string> => {
+//   try {
+//     if (!servicesCollection) throw new Error('Services collection not initialized');
+//     const docRef = await addDoc(servicesCollection, {
+//       name: serviceData.name || 'Unnamed Service',
+//       category: serviceData.category || '',
+//       duration: serviceData.duration ?? 0,
+//       price: serviceData.price ?? 0,
+//       description: serviceData.description || '',
+//       isActive: serviceData.isActive ?? true,
+//        branch: serviceData.branch , // ✅ branch save
+//       imageBase64: serviceData.imageBase64 || '',
+//       createdAt: Timestamp.now(),
+//       updatedAt: Timestamp.now()
+//     });
+//     return docRef.id;
+//   } catch (error) {
+//     console.error('Error adding service:', error);
+//     throw error;
+//   }
+// };
+
+// export const updateService = async (serviceId: string, serviceData: Partial<Service>): Promise<void> => {
+//   try {
+//     if (!isFirebaseConfigured() || !db) throw new Error('Firebase is not configured');
+//     const serviceRef = doc(db, 'services', serviceId);
+//     await updateDoc(serviceRef, { ...serviceData, branch: serviceData.branch , updatedAt: Timestamp.now() });
+//   } catch (error) {
+//     console.error('Error updating service:', error);
+//     throw error;
+//   }
+// };
+
+// export const deleteService = async (serviceId: string): Promise<void> => {
+//   try {
+//     if (!isFirebaseConfigured() || !db) throw new Error('Firebase is not configured');
+//     const serviceRef = doc(db, 'services', serviceId);
+//     await deleteDoc(serviceRef);
+//   } catch (error) {
+//     console.error('Error deleting service:', error);
+//     throw error;
+//   }
+// };
+
+// export const getServices = async (): Promise<Service[]> => {
+//   try {
+//     if (!servicesCollection) return [];
+//     const q = query(servicesCollection, orderBy('createdAt', 'desc'));
+//     const snapshot = await getDocs(q);
+//     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Service));
+//   } catch (error) {
+//     console.error('Error getting services:', error);
+//     throw error;
+//   }
+// };
+
+// export const subscribeToServicesChanges = (callback: (services: Service[]) => void, errorCallback?: (error: Error) => void) => {
+//   if (!servicesCollection) return () => {};
+//   const q = query(servicesCollection, orderBy('createdAt', 'desc'));
+//   return onSnapshot(q, snapshot => {
+//     const services: Service[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Service));
+//     callback(services);
+//   }, error => {
+//     console.error('Error listening to services:', error);
+//     if (errorCallback) errorCallback(error);
+//   });
+// };
+
+// // ==================== BRANCHES ====================
+
+// export interface Branch {
+//   id?: string;
+//   name: string;
+//   address: string;
+//   phone: string;
+//   email: string;
+//   manager: string;
+//   openingHours: string;
+//   isActive: boolean;
+//   imageBase64?: string;
+//   city: string;
+//   country: string;
+//   createdAt?: Timestamp;
+//   updatedAt?: Timestamp;
+// }
+
+// let branchesCollection: CollectionReference | null = null;
+// if (isFirebaseConfigured() && db) {
+//   branchesCollection = collection(db, 'branches');
+// }
+
+// export const addBranch = async (branchData: Omit<Branch, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+//   if (!branchesCollection) throw new Error('Branches collection not initialized');
+//   const docRef = await addDoc(branchesCollection, { ...branchData, createdAt: Timestamp.now(), updatedAt: Timestamp.now() });
+//   return docRef.id;
+// };
+
+// export const updateBranch = async (branchId: string, branchData: Partial<Branch>) => {
+//   if (!db) throw new Error('Firebase is not configured');
+//   const branchRef = doc(db, 'branches', branchId);
+//   await updateDoc(branchRef, { ...branchData, updatedAt: Timestamp.now() });
+// };
+
+// export const deleteBranch = async (branchId: string) => {
+//   if (!db) throw new Error('Firebase is not configured');
+//   const branchRef = doc(db, 'branches', branchId);
+//   await deleteDoc(branchRef);
+// };
+
+// export const getBranches = async (): Promise<Branch[]> => {
+//   if (!branchesCollection) return [];
+//   const snapshot = await getDocs(query(branchesCollection, orderBy('createdAt', 'desc')));
+//   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Branch));
+// };
+
+// export const subscribeToBranchesChanges = (callback: (branches: Branch[]) => void) => {
+//   if (!branchesCollection) return () => {};
+//   return onSnapshot(branchesCollection, snapshot => {
+//     const branches: Branch[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Branch));
+//     callback(branches);
+//   });
+// };
+
+// // ==================== OFFERS ====================
+
+// export interface Offer {
+//   id?: string;
+//   title: string;
+//   description: string;
+//   discountType: 'percentage' | 'fixed';
+//   discountValue: number;
+//   validFrom: string;
+//   validTo: string;
+//   isActive: boolean;
+//   usageLimit?: number;
+//   usedCount: number;
+//   imageBase64?: string;
+//   selectedBranches: string[];
+//   selectedServices: string[];
+//   createdAt?: Timestamp;
+//   updatedAt?: Timestamp;
+// }
+
+// let offersCollection: CollectionReference | null = null;
+// if (isFirebaseConfigured() && db) {
+//   offersCollection = collection(db, 'offers');
+// }
+
+// export const addOffer = async (offerData: Omit<Offer, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+//   if (!offersCollection) throw new Error('Offers collection not initialized');
+//   const docRef = await addDoc(offersCollection, { ...offerData, createdAt: Timestamp.now(), updatedAt: Timestamp.now() });
+//   return docRef.id;
+// };
+
+// export const updateOffer = async (offerId: string, offerData: Partial<Offer>) => {
+//   if (!db) throw new Error('Firebase is not configured');
+//   const offerRef = doc(db, 'offers', offerId);
+//   await updateDoc(offerRef, { ...offerData, updatedAt: Timestamp.now() });
+// };
+
+// export const deleteOffer = async (offerId: string) => {
+//   if (!db) throw new Error('Firebase is not configured');
+//   const offerRef = doc(db, 'offers', offerId);
+//   await deleteDoc(offerRef);
+// };
+
+// export const getOffers = async (): Promise<Offer[]> => {
+//   if (!offersCollection) return [];
+//   const snapshot = await getDocs(query(offersCollection, orderBy('createdAt', 'desc')));
+//   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Offer));
+// };
+
+// export const subscribeToOffersChanges = (callback: (offers: Offer[]) => void) => {
+//   if (!offersCollection) return () => {};
+//   return onSnapshot(offersCollection, snapshot => {
+//     const offers: Offer[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Offer));
+//     callback(offers);
+//   });
+// };
+
+// // ==================== REFERRALS ====================
+
+// export interface Referral {
+//   id?: string;
+//   name: string;
+//   discount: number;
+//   createdAt?: Timestamp;
+// }
+
+// let referralsCollection: CollectionReference | null = null;
+// if (isFirebaseConfigured() && db) {
+//   referralsCollection = collection(db, 'referrals');
+// }
+
+// export const addReferral = async (referralData: Omit<Referral, 'id' | 'createdAt'>): Promise<string> => {
+//   if (!referralsCollection) throw new Error('Referrals collection not initialized');
+//   const docRef = await addDoc(referralsCollection, { ...referralData, createdAt: Timestamp.now() });
+//   return docRef.id;
+// };
+
+// export const updateReferral = async (referralId: string, referralData: Partial<Referral>) => {
+//   if (!db) throw new Error('Firebase is not configured');
+//   const referralRef = doc(db, 'referrals', referralId);
+//   await updateDoc(referralRef, referralData);
+// };
+
+// export const deleteReferral = async (referralId: string) => {
+//   if (!db) throw new Error('Firebase is not configured');
+//   const referralRef = doc(db, 'referrals', referralId);
+//   await deleteDoc(referralRef);
+// };
+
+// export const subscribeToReferralsChanges = (callback: (referrals: Referral[]) => void) => {
+//   if (!referralsCollection) return () => {};
+//   return onSnapshot(referralsCollection, snapshot => {
+//     const referrals: Referral[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Referral));
+//     callback(referrals);
+//   });
+// };
+
+
+
+
+// new
 import { 
   collection, 
   addDoc, 
@@ -1168,7 +1555,9 @@ import {
   query,
   orderBy,
   Timestamp ,
-  CollectionReference
+  CollectionReference,
+   where,
+  increment
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
 
@@ -1295,12 +1684,25 @@ export const subscribeToCategoriesChanges = (callback: (categories: Category[]) 
   });
 };
 
+
+// helper: get category id by its name
+const getCategoryIdByName = async (categoryName: string): Promise<string | null> => {
+  if (!categoriesCollection) return null;
+  const q = query(categoriesCollection, where("name", "==", categoryName));
+  const snapshot = await getDocs(q);
+  if (!snapshot.empty) {
+    return snapshot.docs[0].id;
+  }
+  return null;
+};
+
 // ==================== SERVICE ====================
 
 export interface Service {
   id?: string;
   name: string;
   category: string;
+  categoryId?: string;  // category id
   duration: number;
   price: number;
   description: string;
@@ -1322,18 +1724,34 @@ export const addService = async (
 ): Promise<string> => {
   try {
     if (!servicesCollection) throw new Error('Services collection not initialized');
+
+    // 🔎 categoryId find by category name
+    let categoryId: string | null = null;
+    if (serviceData.category) {
+      categoryId = await getCategoryIdByName(serviceData.category);
+    }
+
+    // service save with BOTH name + id
     const docRef = await addDoc(servicesCollection, {
       name: serviceData.name || 'Unnamed Service',
-      category: serviceData.category || '',
+      category: serviceData.category || '',       // ✅ category name
+      categoryId: categoryId || '',               // ✅ category id
       duration: serviceData.duration ?? 0,
       price: serviceData.price ?? 0,
       description: serviceData.description || '',
       isActive: serviceData.isActive ?? true,
-       branch: serviceData.branch || '', // ✅ branch save
+      branch: serviceData.branch,
       imageBase64: serviceData.imageBase64 || '',
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now()
     });
+
+    // ✅ category ka serviceCount +1
+    if (categoryId) {
+      const categoryRef = doc(db, 'categories', categoryId);
+      await updateDoc(categoryRef, { serviceCount: increment(1) });
+    }
+
     return docRef.id;
   } catch (error) {
     console.error('Error adding service:', error);
@@ -1341,27 +1759,47 @@ export const addService = async (
   }
 };
 
+
+
 export const updateService = async (serviceId: string, serviceData: Partial<Service>): Promise<void> => {
   try {
     if (!isFirebaseConfigured() || !db) throw new Error('Firebase is not configured');
     const serviceRef = doc(db, 'services', serviceId);
-    await updateDoc(serviceRef, { ...serviceData, branch: serviceData.branch || '', updatedAt: Timestamp.now() });
+    await updateDoc(serviceRef, { ...serviceData, branch: serviceData.branch , updatedAt: Timestamp.now() });
   } catch (error) {
     console.error('Error updating service:', error);
     throw error;
   }
 };
 
-export const deleteService = async (serviceId: string): Promise<void> => {
+export const deleteService = async (
+  serviceId: string,
+  categoryName?: string,
+  categoryIdFromService?: string
+): Promise<void> => {
   try {
     if (!isFirebaseConfigured() || !db) throw new Error('Firebase is not configured');
+
     const serviceRef = doc(db, 'services', serviceId);
     await deleteDoc(serviceRef);
+
+    // ✅ category ka serviceCount -1
+    let categoryId = categoryIdFromService;
+    if (!categoryId && categoryName) {
+      categoryId = await getCategoryIdByName(categoryName);
+    }
+
+    if (categoryId) {
+      const categoryRef = doc(db, 'categories', categoryId);
+      await updateDoc(categoryRef, { serviceCount: increment(-1) });
+    }
   } catch (error) {
     console.error('Error deleting service:', error);
     throw error;
   }
 };
+
+
 
 export const getServices = async (): Promise<Service[]> => {
   try {
